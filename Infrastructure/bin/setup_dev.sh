@@ -11,7 +11,7 @@ echo "Setting up Parks Development Environment in project ${GUID}-parks-dev"
 oc project ${GUID}-parks-dev
 # Code to set up the parks development project.
 
-oc policy add-role-to-user edit system:serviceaccount:70fa-jenkins:jenkins -n 70fa-parks-dev
+oc policy add-role-to-user edit system:serviceaccount:uz-jenkins:jenkins -n uz-parks-dev
 
 oc new-app --name=mongodb -e MONGODB_USER=mongodb -e MONGODB_PASSWORD=mongodb -e MONGODB_DATABASE=parks -e MONGODB_ADMIN_PASSWORD=mongodb_admin_password     registry.access.redhat.com/rhscl/mongodb-26-rhel7
 oc rollout pause dc/mongodb 

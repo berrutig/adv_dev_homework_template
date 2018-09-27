@@ -7,6 +7,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 GUID=$1
+oc project ${GUID}-nexus
 echo "Setting up Nexus in project $GUID-nexus"
 
 # Code to set up the Nexus. It will need to
@@ -30,10 +31,10 @@ echo "Setting up Nexus in project $GUID-nexus"
 
 # To be Implemented by Student
 
-oc project $GUID-nexus
+
 
 oc new-app sonatype/nexus3:latest
-sleep 20
+sleep 10
 oc expose svc nexus3
 oc rollout pause dc nexus3
 

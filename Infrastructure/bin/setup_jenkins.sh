@@ -10,6 +10,7 @@ fi
 GUID=$1
 REPO=$2
 CLUSTER=$3
+oc project ${GUID}-jenkins
 echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cluster ${CLUSTER}"
 
 # Code to set up the Jenkins project to execute the
@@ -28,10 +29,10 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 
 # To be Implemented by Student
 
-oc project ${GUID}-jenkins
+
 
 oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi
-
+sleep 10
 LIN_NUM=$(($(sed -n '/\[registries.insecure\]/=' /etc/containers/registries.conf) + 1))
 sed -i "${LIN_NUM}d" /etc/containers/registries.conf
 sed "${LIN_NUM}i registries = \['docker-registry-default.apps.na39.openshift.opentlc.com'\]" /etc/containers/registries.conf

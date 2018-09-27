@@ -12,6 +12,37 @@ REPO=$2
 CLUSTER=$3
 oc project ${GUID}-jenkins
 echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cluster ${CLUSTER}"
+oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=4Gi --param VOLUME_CAPACITY=4Gi -n ${GUID}-jenkins
+oc rollout pause dc jenkins -n ${GUID}-jenkins
+oc set resources dc jenkins --limits=memory=4Gi,cpu=2 --requests=memory=2Gi,cpu=1 -n ${GUID}-jenkins
+oc rollout resume dc jenkins -n ${GUID}-jenkins
+
+while : ; do
+    oc get pod -n ${GUID}-jenkins | grep -v deploy | grep "1/1"
+    if [ $? == "1" ] 
+      then 
+        sleep 10
+      else 
+        break 
+    fi
+done
+
+oc new-build --name=jenkins-slave-appdev --dockerfile=$'FROM docker.io/openshift/jenkins-slave-maven-centos7:v3.9\nUSER root\nRUN yum -y install skopeo apb && \yum clean all\nUSER 1001' -n ${GUID}-jenkins
+
+while : ; do
+    oc get pod -n ${GUID}-jenkins | grep 'slave' | grep "Completed"
+    if [ $? == "0" ]
+      then
+        echo 'jenkins-slave-appdev build completed'
+        break
+      else
+        echo 'jenkins-slave-appdev building sleep 10'
+        sleep 10
+    fi
+done
+
+
+oc create configmap basic-config --from-literal="GUID=${GUID}" --from-literal="REPO=${REPO}" --from-literal="CLUSTER=${CLUSTER}"
 
 # Code to set up the Jenkins project to execute the
 # three pipelines.
@@ -28,88 +59,3 @@ echo "Setting up Jenkins in project ${GUID}-jenkins from Git Repo ${REPO} for Cl
 # * CLUSTER: the base url of the cluster used (e.g. na39.openshift.opentlc.com)
 
 # To be Implemented by Student
-
-
-
-oc new-app jenkins-persistent --param ENABLE_OAUTH=true --param MEMORY_LIMIT=2Gi --param VOLUME_CAPACITY=4Gi
-sleep 10
-LIN_NUM=$(($(sed -n '/\[registries.insecure\]/=' /etc/containers/registries.conf) + 1))
-sed -i "${LIN_NUM}d" /etc/containers/registries.conf
-sed "${LIN_NUM}i registries = \['docker-registry-default.apps.na39.openshift.opentlc.com'\]" /etc/containers/registries.conf
-
-
-sudo systemctl enable docker
-sudo systemctl start docker
-
-mkdir -p $HOME/jenkins-slave-appdev
-cd  $HOME/jenkins-slave-appdev
-
-echo "FROM docker.io/openshift/jenkins-slave-maven-centos7:v3.9
-USER root
-RUN yum -y install skopeo apb && \
-    yum clean all
-USER 1001" > Dockerfile
-
-sudo docker build . -t docker-registry-default.apps.na39.example.opentlc.com/${GUID}-jenkins/jenkins-slave-maven-appdev:v3.9
-
-skopeo copy --dest-tls-verify=false --dest-creds=$(oc whoami):$(oc whoami -t) docker-daemon:docker-registry-default.apps.${CLUSTER}/${GUID}-jenkins/jenkins-slave-maven-appdev:v3.9 docker://docker-registry-default.apps.${CLUSTER}/${GUID}-jenkins/jenkins-slave-maven-appdev:v3.9
-
-
-echo "apiVersion: v1
-items:
-- kind: "BuildConfig"
-  apiVersion: "v1"
-  metadata:
-    name: "mlbparks-pipeline"
-  spec:
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/uzugic/adv_dev_homework_template"
-    strategy:
-      type: "JenkinsPipeline"
-      jenkinsPipelineStrategy:
-        env:
-        - name: GUID
-          value: uz
-        - name: CLUSTER
-          value: na39.openshift.opentlc.com
-        jenkinsfilePath: MLBParks/Jenkinsfile
-- kind: "BuildConfig"
-  apiVersion: "v1"
-  metadata:
-    name: "nationalparks-pipeline"
-  spec:
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/uzugic/adv_dev_homework_template"
-    strategy:
-      type: "JenkinsPipeline"
-      jenkinsPipelineStrategy:
-        env:
-        - name: GUID
-          value: uz
-        - name: CLUSTER
-          value: na39.openshift.opentlc.com
-        jenkinsfilePath: Nationalparks/Jenkinsfile
-- kind: "BuildConfig"
-  apiVersion: "v1"
-  metadata:
-    name: "parksmap-pipeline"
-  spec:
-    source:
-      type: "Git"
-      git:
-        uri: "https://github.com/uzugic/adv_dev_homework_template"
-    strategy:
-      type: "JenkinsPipeline"
-      jenkinsPipelineStrategy:
-        env:
-        - name: GUID
-          value: uz
-        - name: CLUSTER
-          value: na39.openshift.opentlc.com
-        jenkinsfilePath: ParksMap/Jenkinsfile
-kind: List
-metadata: []" | oc create -f - -n uz-jenkins

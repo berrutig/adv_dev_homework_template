@@ -33,6 +33,7 @@ echo "Setting up Nexus in project $GUID-nexus"
 oc project $GUID-nexus
 
 oc new-app sonatype/nexus3:latest
+sleep 20
 oc expose svc nexus3
 oc rollout pause dc nexus3
 

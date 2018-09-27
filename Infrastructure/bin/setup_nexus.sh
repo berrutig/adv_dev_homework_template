@@ -29,3 +29,21 @@ echo "Setting up Nexus in project $GUID-nexus"
 # oc new-app -f ../templates/nexus.yaml --param .....
 
 # To be Implemented by Student
+
+oc new-app -f ./Infrastructure/templates/nexus-template.yaml --param GUID=${GUID} -n ${GUID}-nexus
+
+while : ; do
+echo "Checking if Nexus is Ready..."
+ oc get pod -n ${GUID}-nexus|grep '\-1\-'|grep -v deploy|grep "1/1"
+ [[ "$?" == "1" ]] || break
+ echo "...no. Sleeping 10 seconds."
+ sleep 10
+done
+
+oc project ${GUID}-nexus
+
+chmod +x ./setup_nexus3.sh
+
+./setup_nexus3.sh admin admin123 http://$(oc get route nexus3 --template='{{ .spec.host }}')
+
+

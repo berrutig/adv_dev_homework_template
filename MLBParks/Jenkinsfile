@@ -31,7 +31,7 @@ podTemplate(
 
     sh "sed -i 's/CLUSTER/${CLUSTER}/' ./MLBParks/nexus_settings.xml"
     
-    def mvnCmd = "mvn -s ./MLBParks/nexus_settings.xml"
+    def mvnCmd = "mvn -s ../nexus_settings.xml"
 
     def groupId    = getGroupIdFromPom("./MLBParks/pom.xml")
     def artifactId = getArtifactIdFromPom("./MLBParks/pom.xml")
@@ -45,7 +45,7 @@ podTemplate(
     stage('Build war') {
       echo "Building version ${version}"
     
-      sh "${mvnCmd} -f ./MLBParks/pom.xml clean package -DskipTests -U"
+      sh "${mvnCmd} -f ./MLBParks/pom.xml clean package -DskipTests=true -U"
     }
 
     // Using Maven run the unit tests
